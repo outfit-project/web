@@ -1,0 +1,14 @@
+services:
+  frontend:
+    build: .
+    container_name: vestis_frontend
+    ports:
+      - "3000:80"
+    networks:
+      - wardrobe-shared
+    restart: on-failure
+
+networks:
+  wardrobe-shared:
+    external: true
+    name: ${WARDROBE_DOCKER_NETWORK:-wardrobe-service_wardrobe-network}

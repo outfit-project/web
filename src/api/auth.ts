@@ -1,24 +1,25 @@
 import { authAxios } from './axios'
-import type { AuthResponse, LoginRequest, RegisterRequest } from '../types/auth'
+import type { AuthResponse, LoginRequest, RegisterRequest, VerifyRequest } from '../types/auth'
 
 export const login = async (data: LoginRequest): Promise<AuthResponse> => {
-    const response = await authAxios.post<AuthResponse>('/auth/login', data)
-    return response.data
+  const r = await authAxios.post<AuthResponse>('/auth/login', data)
+  return r.data
 }
 
 export const register = async (data: RegisterRequest): Promise<void> => {
-    await authAxios.post('/auth/register', data)
+  await authAxios.post('/auth/register', data)
 }
 
-export const refresh = async (token: string): Promise<AuthResponse> => {
-    const response = await authAxios.post<AuthResponse>('/auth/refresh', { refresh_token: token })
-    return response.data
-}
-
-export const verify = async (code: string): Promise<void> => {
-    await authAxios.post('/auth/verify', { code })
+export const verify = async (data: VerifyRequest): Promise<AuthResponse> => {
+  const r = await authAxios.post<AuthResponse>('/auth/verify', data)
+  return r.data
 }
 
 export const resendCode = async (email: string): Promise<void> => {
-    await authAxios.post('/auth/resend', { email })
+  await authAxios.post('/auth/resend-code', { email })
+}
+
+export const refreshTokens = async (token: string): Promise<AuthResponse> => {
+  const r = await authAxios.post<AuthResponse>('/auth/refresh', { refresh_token: token })
+  return r.data
 }

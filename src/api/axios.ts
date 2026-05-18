@@ -1,46 +1,45 @@
 import axios from 'axios'
+import { apiBase } from '../config/api'
 import { useAuthStore } from '../store/auth.store'
-import {refresh} from "./auth.ts";
 
-const createInstance = (baseURL: string) => {
-    const instance = axios.create({ baseURL })
+const addInterceptors = (instance: ReturnType<typeof axios.create>) => {
+  instance.interceptors.request.use((config) => {
+    const token = useAuthStore.getState().token
+    if (token) config.headers.Authorization = `Bearer ${token}`
+    return config
+  })
 
-    instance.interceptors.request.use((config) => {
-        const token = useAuthStore.getState().token
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`
+  instance.interceptors.response.use(
+    (r) => r,
+    async (error) => {
+      const original = error.config
+      if (error.response?.status === 401 && !original._retry) {
+        original._retry = true
+        const refreshToken = useAuthStore.getState().refreshToken
+        if (!refreshToken) {
+          useAuthStore.getState().logout()
+          return Promise.reject(error)
         }
-        return config
-    })
-
-    instance.interceptors.response.use(
-        (response) => response,
-        async (error) => {
-            const original = error.config
-            if (error.response?.status === 401 && !original._retry) {
-                original._retry = true
-                const refreshToken = useAuthStore.getState().refreshToken
-                if (!refreshToken) {
-                    useAuthStore.getState().logout()
-                    return Promise.reject(error)
-                }
-                try {
-                    const { access_token, refresh_token } = await refresh(refreshToken)
-                    useAuthStore.getState().setAuth(access_token, refresh_token)
-                    original.headers.Authorization = `Bearer ${access_token}`
-                    return instance(original)
-                } catch {
-                    useAuthStore.getState().logout()
-                    return Promise.reject(error)
-                }
-            }
-            return Promise.reject(error)
+        try {
+          const { data } = await axios.post(
+            `${apiBase.auth}/auth/refresh`,
+            { refresh_token: refreshToken }
+          )
+          useAuthStore.getState().setAuth(data.access_token, data.refresh_token)
+          original.headers.Authorization = `Bearer ${data.access_token}`
+          return instance(original)
+        } catch {
+          useAuthStore.getState().logout()
+          return Promise.reject(error)
         }
-    )
+      }
+      return Promise.reject(error)
+    }
+  )
 
-    return instance
+  return instance
 }
 
-export const authAxios     = createInstance(import.meta.env.VITE_AUTH_URL)
-export const wardrobeAxios = createInstance(import.meta.env.VITE_WARDROBE_URL)
-export const outfitAxios   = createInstance(import.meta.env.VITE_OUTFIT_URL)
+export const authAxios = addInterceptors(axios.create({ baseURL: apiBase.auth }))
+export const wardrobeAxios = addInterceptors(axios.create({ baseURL: apiBase.wardrobe }))
+export const outfitAxios = addInterceptors(axios.create({ baseURL: apiBase.outfit }))
