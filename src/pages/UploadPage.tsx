@@ -3,7 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { useUploadItem } from '../hooks/useWardrobe'
 
-const CATEGORIES = ['top', 'bottom', 'shoes', 'accessory']
+const CATEGORIES = ['top', 'bottom', 'shoes', 'accessory','outer']
+
+const CATEGORY_LABELS: Record<string, string> = {
+  top: 'Футболка, рубашка, блузка',
+  outer: 'Куртка, кофта, худи, кардиган',
+  bottom: 'Штаны, джинсы, юбка',
+  shoes: 'Обувь',
+  accessory: 'Аксессуары',
+}
 
 export default function UploadPage() {
   const navigate = useNavigate()
@@ -83,7 +91,7 @@ export default function UploadPage() {
 
             <div>
               <p className="label" style={{ marginBottom: '8px' }}>Category</p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
                 {CATEGORIES.map(cat => (
                   <button
                     key={cat}
@@ -102,7 +110,10 @@ export default function UploadPage() {
                       transition: 'all 0.15s',
                     }}
                   >
-                    {cat}
+                    <span>{cat}</span>
+                    <span style={{ display: 'block', fontSize: '9px', color: 'var(--text-dim)', marginTop: '2px', textTransform: 'none', letterSpacing: 'normal' }}>
+                      {CATEGORY_LABELS[cat]}
+                    </span>
                   </button>
                 ))}
               </div>

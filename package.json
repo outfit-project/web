@@ -8,8 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "docker:build": "npm run build && docker compose build",
-    "docker:up": "npm run docker:build && docker compose up -d"
+    "docker:up": "npm run build && docker compose up -d",
+    "docker:reload": "npm run build && docker compose up -d --force-recreate"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.12",
