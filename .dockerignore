@@ -1,13 +1,8 @@
 node_modules
+dist
+dist-ssr
 .git
 *.md
 .env
 .env.*
-src
-public
-index.html
-vite.config.ts
-tsconfig*.json
-eslint.config.js
-package.json
-package-lock.json
+.dockerignore
