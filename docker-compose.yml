@@ -1,5 +1,7 @@
 services:
   frontend:
+    env_file:
+      - ../../deploy.env
     image: nginx:alpine
     container_name: vestis_frontend
     volumes:
