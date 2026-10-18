@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { queryClient } from './queryClient'
 import { useAuthStore } from './store/auth.store'
 import ProtectedRoute from './components/ProtectedRoute'
 import LoginPage from './pages/LoginPage'
@@ -10,17 +11,18 @@ import WardrobePage from './pages/WardrobePage'
 import UploadPage from './pages/UploadPage'
 import OutfitPage from './pages/OutfitPage'
 
-const qc = new QueryClient({
-  defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
-})
-
 function App() {
   useEffect(() => {
-    useAuthStore.getState().loadFromStorage()
+    const sync = (event: StorageEvent) => {
+      if (event.key === 'access_token' || event.key === 'refresh_token' || event.key === null) {
+        useAuthStore.getState().loadFromStorage()
+      }
+    }
+    window.addEventListener('storage', sync)
+    return () => window.removeEventListener('storage', sync)
   }, [])
-
   return (
-    <QueryClientProvider client={qc}>
+    <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />

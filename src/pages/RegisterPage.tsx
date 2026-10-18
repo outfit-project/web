@@ -1,99 +1,35 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { register } from '../api/auth'
+import { errorMessage } from '../api/errors'
+import { useAuthStore } from '../store/auth.store'
+import AuthLayout from '../components/AuthLayout'
+import Icon from '../components/Icon'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
+  const token = useAuthStore(state => state.token)
   const [form, setForm] = useState({ username: '', email: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault(); setError(''); setLoading(true)
+    const email = form.email.trim()
     try {
-      await register(form)
-      navigate(`/verify?email=${encodeURIComponent(form.email)}`)
-    } catch (err: unknown) {
-      const detail =
-        err &&
-        typeof err === 'object' &&
-        'response' in err &&
-        err.response &&
-        typeof err.response === 'object' &&
-        'data' in err.response &&
-        err.response.data &&
-        typeof err.response.data === 'object' &&
-        'detail' in err.response.data
-          ? String(err.response.data.detail)
-          : null
-      setError(detail || 'Registration failed')
-    } finally {
-      setLoading(false)
-    }
+      await register({ ...form, email, username: form.username.trim() })
+      navigate(`/verify?email=${encodeURIComponent(email)}`)
+    } catch (err) { setError(errorMessage(err, 'We couldn’t create your account. Please try again.')) }
+    finally { setLoading(false) }
   }
-
-  return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'var(--bg)',
-      padding: '24px',
-    }}>
-      <div className="fade-up" style={{ width: '100%', maxWidth: '360px' }}>
-        <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-          <h1 style={{ fontFamily: 'var(--serif)', fontSize: '36px', fontWeight: 300, letterSpacing: '0.08em', marginBottom: '8px' }}>
-            Vestis
-          </h1>
-          <p className="label">Create your account</p>
-        </div>
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div>
-            <p className="label" style={{ marginBottom: '6px' }}>Username</p>
-            <input
-              value={form.username}
-              onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
-              placeholder="your_username"
-              required
-            />
-          </div>
-          <div>
-            <p className="label" style={{ marginBottom: '6px' }}>Email</p>
-            <input
-              type="email"
-              value={form.email}
-              onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-              placeholder="you@example.com"
-              required
-            />
-          </div>
-          <div>
-            <p className="label" style={{ marginBottom: '6px' }}>Password</p>
-            <input
-              type="password"
-              value={form.password}
-              onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-              placeholder="••••••••"
-              required
-            />
-          </div>
-
-          {error && <p className="error-msg">{error}</p>}
-
-          <button type="submit" className="btn btn-primary" disabled={loading} style={{ marginTop: '8px', justifyContent: 'center' }}>
-            {loading ? <span className="spinner" /> : 'Register'}
-          </button>
-        </form>
-
-        <p style={{ textAlign: 'center', marginTop: '32px', fontSize: '12px', color: 'var(--text-dim)' }}>
-          Have an account?{' '}
-          <Link to="/login" style={{ color: 'var(--accent)' }}>Sign in</Link>
-        </p>
-      </div>
-    </div>
-  )
+  if (token) return <Navigate to="/wardrobe" replace />
+  return <AuthLayout title="Make it yours." intro="A fresh perspective on the pieces you already love." footer={<>Already have an account? <Link to="/login">Sign in ↗</Link></>}>
+    <form className="auth-form" onSubmit={handleSubmit}>
+      <div className="form-field"><label htmlFor="username">Username</label><input id="username" autoComplete="username" value={form.username} onChange={event => setForm({ ...form, username: event.target.value })} placeholder="Choose a username" required minLength={3} maxLength={128} /></div>
+      <div className="form-field"><label htmlFor="email">Email address</label><input id="email" type="email" autoComplete="email" value={form.email} onChange={event => setForm({ ...form, email: event.target.value })} placeholder="you@example.com" required /></div>
+      <div className="form-field"><label htmlFor="password">Password</label><input id="password" type="password" autoComplete="new-password" value={form.password} onChange={event => setForm({ ...form, password: event.target.value })} placeholder="Create a password" required minLength={8} maxLength={128} aria-describedby="password-help" /><span id="password-help" className="field-help">Use 8–128 characters.</span></div>
+      {error && <p className="error-msg" role="alert">{error}</p>}
+      <button type="submit" className="btn btn-primary" disabled={loading}>{loading ? <><span className="spinner" /> Creating your account…</> : <>Create account <Icon name="arrow" size={17} /></>}</button>
+      <p className="field-help">We’ll email a code to confirm it’s you.</p>
+    </form>
+  </AuthLayout>
 }

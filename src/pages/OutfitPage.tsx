@@ -1,131 +1,22 @@
-import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import Icon from '../components/Icon'
+import { Attributes, GarmentImage } from '../components/ItemCard'
+import { itemLabel } from '../types/format'
 import { useOutfit } from '../hooks/useWardrobe'
-import type { OutfitItem } from '../types/item'
-
-function OutfitItemCard({ item }: { item: OutfitItem }) {
-  return (
-    <div style={{
-      background: 'var(--surface)',
-      border: '1px solid var(--border)',
-      borderRadius: 'var(--radius-lg)',
-      overflow: 'hidden',
-      aspectRatio: '3/4',
-    }}>
-      <img
-        src={item.image_url}
-        alt={item.category}
-        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-        onError={e => { (e.target as HTMLImageElement).style.opacity = '0.2' }}
-      />
-    </div>
-  )
-}
+import { errorMessage } from '../api/errors'
 
 export default function OutfitPage() {
-  const [enabled, setEnabled] = useState(false)
-  const { data, isFetching, refetch, error } = useOutfit(enabled)
-
-  const outfit = data?.items?.length ? data : null
-
-  const handleSuggest = () => {
-    if (!enabled) setEnabled(true)
-    else refetch()
-  }
-
-  return (
-    <>
-      <Navbar />
-      <div className="page fade-up">
-        <div style={{ maxWidth: '560px', margin: '0 auto' }}>
-          <div style={{ marginBottom: '48px' }}>
-            <h2 style={{ fontFamily: 'var(--serif)', fontSize: '28px', fontWeight: 300, letterSpacing: '0.04em' }}>
-              Today's Outfit
-            </h2>
-            <p className="label" style={{ marginTop: '4px' }}>AI-powered style matching</p>
-          </div>
-
-          {!enabled && !outfit && (
-            <div style={{ textAlign: 'center', paddingTop: '60px' }}>
-              <p style={{
-                fontFamily: 'var(--serif)',
-                fontSize: '20px',
-                fontWeight: 300,
-                color: 'var(--text-muted)',
-                marginBottom: '32px',
-                lineHeight: 1.6,
-              }}>
-                Let us find the perfect<br />combination from your wardrobe
-              </p>
-              <button className="btn btn-primary" onClick={handleSuggest}>
-                Suggest Outfit
-              </button>
-            </div>
-          )}
-
-          {isFetching && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '80px', gap: '16px' }}>
-              <span className="spinner" style={{ width: '28px', height: '28px' }} />
-              <p className="label">Finding your look</p>
-            </div>
-          )}
-
-          {enabled && !isFetching && !error && !outfit && (
-            <div style={{ textAlign: 'center', paddingTop: '60px' }}>
-              <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '24px' }}>
-                No top + bottom pair with embeddings yet. Add at least one top and one bottom, then wait for processing.
-              </p>
-              <button className="btn btn-ghost" onClick={handleSuggest}>Try Again</button>
-            </div>
-          )}
-
-          {error && !isFetching && (
-            <div style={{ textAlign: 'center', paddingTop: '60px' }}>
-              <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '24px' }}>
-                Could not generate outfit. Add more items to your wardrobe.
-              </p>
-              <button className="btn btn-ghost" onClick={handleSuggest}>Try Again</button>
-            </div>
-          )}
-
-          {outfit && !isFetching && (
-            <div className="fade-up">
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(2, 1fr)',
-                gap: '12px',
-                marginBottom: '32px',
-              }}>
-                {outfit.items.map((item) => (
-                  <div key={item.id}>
-                    <OutfitItemCard item={item} />
-                    <p className="label" style={{ marginTop: '8px', textAlign: 'center' }}>{item.category}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                borderTop: '1px solid var(--border)',
-                paddingTop: '24px',
-              }}>
-                <div>
-                  <p className="label">Compatibility score</p>
-                  <p style={{ fontFamily: 'var(--serif)', fontSize: '22px', fontWeight: 300, color: 'var(--accent)', marginTop: '2px' }}>
-                    {outfit.score != null ? `${(outfit.score * 100).toFixed(0)}%` : '—'}
-                  </p>
-                </div>
-
-                <button className="btn btn-ghost" onClick={handleSuggest}>
-                  Try Another
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </>
-  )
+  const suggestion = useOutfit()
+  const outfit = suggestion.data
+  const hasOutfit = !!outfit?.items.length
+  return <><Navbar /><main id="main" className="page fade-up">
+    <div className="page-heading"><div><p className="eyebrow"><span className="small-rule" /> The outfit studio</p><h1>Familiar pieces.<br className="mobile-break" /> <em>Fresh perspective.</em></h1><p className="lead">A new way to wear the wardrobe you already love.</p></div></div>
+    {!hasOutfit && <section className="outfit-intro"><div className="outfit-art" aria-hidden="true"><div className="art-orbit orbit-one" /><div className="art-orbit orbit-two" /><Icon name="hanger" size={80} /><span className="art-spark"><Icon name="spark" size={34} /></span></div><p className="eyebrow">A little inspiration, from your own wardrobe</p><h2>Your next look is already here.</h2><p>Bring together a top, a bottom and a pair of shoes.<br />We’ll find a combination from your ready pieces.</p></section>}
+    {suggestion.error && <p className="notice" role="alert">{errorMessage(suggestion.error, 'We couldn’t find an outfit right now. Please try again.')}</p>}
+    {outfit?.message && <div className="notice" role="status"><p>{outfit.message}</p>{!hasOutfit && <Link className="text-button" to="/upload">Add another piece ↗</Link>}</div>}
+    {suggestion.isPending && <p className="processing-note outfit-progress" role="status"><span className="spinner" /> Finding a look from your collection…</p>}
+    {hasOutfit && <section className="outfit-result" aria-label="Suggested outfit"><div className="outfit-result-header"><p className="eyebrow">A look to make your own</p>{outfit.score !== null && <span className="score"><Icon name="spark" size={17} />{Math.round(outfit.score * 100)}% compatibility</span>}</div><div className="outfit-grid">{outfit.items.map((item, index) => <article className="outfit-piece" key={item.id}><div className="outfit-photo"><GarmentImage item={item} /><span className="piece-number">0{index + 1}</span></div><p className="eyebrow">{itemLabel(item.category)}</p><h2>{itemLabel(item.subcategory) || 'Wardrobe essential'}</h2><Attributes item={item} /></article>)}</div><p className="outfit-caption">Your clothes, seen together. Make the look your own.</p></section>}
+    <div className="outfit-controls"><button className="btn btn-primary" disabled={suggestion.isPending} onClick={() => suggestion.mutate()}><Icon name="spark" size={17} />{suggestion.isPending ? 'Finding your look…' : hasOutfit ? 'Try another combination' : 'Find my outfit'}</button><Link className="text-button" to="/wardrobe">Back to my wardrobe <Icon name="arrow" size={16} /></Link></div>
+  </main></>
 }

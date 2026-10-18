@@ -1,87 +1,47 @@
 import { useState } from 'react'
-import type { Item } from '../types/item'
-import { useDeleteItem } from '../hooks/useWardrobe'
+import type { Item, OutfitItem } from '../types/item'
+import { useDeleteItem, useRetryItem } from '../hooks/useWardrobe'
+import { errorMessage } from '../api/errors'
+import Icon from './Icon'
+import { itemLabel } from '../types/format'
+
+export function GarmentImage({ item }: { item: OutfitItem }) {
+  const [failed, setFailed] = useState(false)
+  return <div className="garment-image">
+    {failed ? <div className="image-fallback"><Icon name="hanger" size={38} /><span>Photo unavailable</span></div> :
+      <img src={item.image_url} alt={itemLabel(item.subcategory || item.category) || 'Uploaded garment'} loading="lazy" onError={() => setFailed(true)} />}
+  </div>
+}
+
+export function Attributes({ item }: { item: OutfitItem }) {
+  const color = item.color_hex && /^#[0-9a-f]{6}$/i.test(item.color_hex) ? item.color_hex : null
+  return <div className="attributes">
+    <span>{itemLabel(item.style) || 'Style pending'}</span>
+    {color && <span className="color-detail"><span className="swatch" style={{ backgroundColor: color }} aria-hidden="true" /><span>{color.toUpperCase()}</span></span>}
+  </div>
+}
 
 export default function ItemCard({ item }: { item: Item }) {
-  const { mutate: deleteItem, isPending } = useDeleteItem()
-  const [hovered, setHovered] = useState(false)
-
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        position: 'relative',
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: 'var(--radius-lg)',
-        overflow: 'hidden',
-        aspectRatio: '3/4',
-        cursor: 'default',
-        transition: 'border-color 0.2s',
-        borderColor: hovered ? 'var(--border-hover)' : undefined,
-      }}
-    >
-      <img
-        src={item.image_url}
-        alt={item.category}
-        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-        onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-      />
-
-      <div style={{
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        padding: '32px 12px 12px',
-        background: 'linear-gradient(transparent, rgba(0,0,0,0.85))',
-        display: 'flex',
-        alignItems: 'flex-end',
-        justifyContent: 'space-between',
-        opacity: hovered ? 1 : 0,
-        transition: 'opacity 0.2s',
-      }}>
-        <span className="label" style={{ color: 'rgba(255,255,255,0.6)' }}>
-          {item.category}
-        </span>
-
-        <button
-          onClick={() => deleteItem(item.id)}
-          disabled={isPending}
-          style={{
-            fontSize: '10px',
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase',
-            color: '#e74c3c',
-            background: 'rgba(0,0,0,0.5)',
-            border: '1px solid rgba(231,76,60,0.3)',
-            borderRadius: 'var(--radius)',
-            padding: '4px 10px',
-            cursor: 'pointer',
-          }}
-        >
-          {isPending ? '...' : 'Remove'}
-        </button>
-      </div>
-
-      {!item.embedding && (
-        <div style={{
-          position: 'absolute',
-          top: 8,
-          right: 8,
-          background: 'rgba(0,0,0,0.7)',
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--radius)',
-          padding: '3px 8px',
-          fontSize: '9px',
-          letterSpacing: '0.1em',
-          textTransform: 'uppercase',
-          color: 'var(--text-dim)',
-        }}>
-          Processing
-        </div>
-      )}
+  const remove = useDeleteItem()
+  const retry = useRetryItem()
+  const [confirm, setConfirm] = useState(false)
+  const busy = remove.isPending || retry.isPending
+  const statusLabel = { ready: 'Ready to style', pending: 'In the queue', processing: 'Finding the details', failed: 'Needs attention' }[item.processing_status]
+  return <article className="item-card">
+    <div className="item-photo"><GarmentImage item={item} />
+      <span className={`status status-${item.processing_status}`}><span className="status-dot" />{statusLabel}</span>
     </div>
-  )
+    <div className="item-content">
+      <p className="eyebrow">{itemLabel(item.category) || 'New addition'}</p>
+      <h2>{itemLabel(item.subcategory) || (item.processing_status === 'ready' ? 'Wardrobe essential' : 'Your new piece')}</h2>
+      {item.processing_status === 'ready' ? <Attributes item={item} /> :
+        <p className="item-description">{item.processing_status === 'failed' ? item.processing_error || 'We could not read this photo. Try again with a clear photo of one item.' : 'We’re identifying the category, style and color. Your piece will update automatically.'}</p>}
+      {(remove.error || retry.error) && <p className="error-msg" role="alert">{errorMessage(remove.error || retry.error)}</p>}
+      <div className="item-actions">
+        {item.processing_status === 'failed' && <button className="text-button" disabled={busy} onClick={() => retry.mutate(item.id)}>{retry.isPending ? 'Retrying…' : 'Try again ↻'}</button>}
+        {confirm ? <div className="confirm-remove"><span>Remove item?</span><button className="text-button danger" disabled={busy} onClick={() => remove.mutate(item.id)}>{remove.isPending ? 'Removing…' : 'Yes, remove'}</button><button className="text-button" disabled={busy} onClick={() => setConfirm(false)}>Keep</button></div> :
+          <button className="text-button remove-button" disabled={busy} onClick={() => setConfirm(true)}>Remove</button>}
+      </div>
+    </div>
+  </article>
 }

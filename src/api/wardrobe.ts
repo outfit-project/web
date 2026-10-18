@@ -8,9 +8,7 @@ export const getItems = async (): Promise<ItemListResponse> => {
 }
 
 export const uploadItem = async (formData: FormData): Promise<UploadItemResponse> => {
-  const r = await api.post<UploadItemResponse>('/items/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  const r = await api.post<UploadItemResponse>('/items/upload', formData)
   return r.data
 }
 
@@ -19,3 +17,8 @@ export const deleteItem = async (id: string): Promise<void> => {
 }
 
 export const getItemImageUrl = (id: string): string => wardrobeImageUrl(id)
+
+export const retryItem = async (id: string): Promise<UploadItemResponse> => {
+  const r = await api.post<UploadItemResponse>(`/items/${id}/retry`)
+  return r.data
+}
